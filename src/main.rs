@@ -1,4 +1,4 @@
-use aoc2023::day1;
+use aoc2023::*;
 use clap::Parser;
 
 #[derive(Parser)]
@@ -12,8 +12,10 @@ fn main() {
     let cli = Cli::parse();
     match cli.day {
         Some(1) => day1::run(),
+        Some(2) => day2::run(),
         None => {
             day1::run();
+            day2::run();
         }
         Some(d) => println!("day {d} not implemented"),
     }
