@@ -13,9 +13,11 @@ fn main() {
     match cli.day {
         Some(1) => day1::run(),
         Some(2) => day2::run(),
+        Some(3) => day3::run(),
         None => {
             day1::run();
             day2::run();
+            day3::run();
         }
         Some(d) => println!("day {d} not implemented"),
     }
