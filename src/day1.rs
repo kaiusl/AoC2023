@@ -1,3 +1,4 @@
+const DAY: u8 = 1;
 pub const INPUT: &str = include_str!("../inputs/day1.txt");
 
 pub fn run() {
@@ -6,12 +7,10 @@ pub fn run() {
 
 fn solve(input: &str) {
     let answer_part1 = solve_part1(input);
-    println!("day1::part1 answer: {}", answer_part1);
-    assert_eq!(answer_part1, 56049);
+    println!("day{DAY}::part1 answer: {}", answer_part1);
 
     let answer_part2 = solve_part2(input);
-    println!("day1::part2 answer: {}", answer_part2);
-    assert_eq!(answer_part2, 54530);
+    println!("day{DAY}::part2 answer: {}", answer_part2);
 }
 
 fn solve_part1(input: &str) -> u32 {

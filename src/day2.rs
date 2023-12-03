@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+const DAY: u8 = 2;
 pub const INPUT: &str = include_str!("../inputs/day2.txt");
 
 pub fn run() {
@@ -8,10 +9,10 @@ pub fn run() {
 
 fn solve(input: &str) {
     let answer_part1 = solve_part1(input);
-    println!("day2::part1 answer: {}", answer_part1);
+    println!("day{DAY}::part1 answer: {}", answer_part1);
 
     let answer_part2 = solve_part2(input);
-    println!("day1::part2 answer: {}", answer_part2);
+    println!("day{DAY}::part2 answer: {}", answer_part2);
 }
 
 #[derive(Debug)]
