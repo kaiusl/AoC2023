@@ -24,7 +24,9 @@ fn solve_part2(input: &str) -> u64 {
 mod tests {
     use super::*;
 
-    const TEST_INPUT1: &str = "";
+    const TEST_INPUT1: &str = indoc::indoc! {"
+
+    "};
 
     #[test]
     fn test_part1() {
