@@ -10,15 +10,19 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    match cli.day {
-        Some(1) => day1::run(),
-        Some(2) => day2::run(),
-        Some(3) => day3::run(),
-        None => {
-            day1::run();
-            day2::run();
-            day3::run();
+
+    macro_rules! match_day {
+        ($($num:literal =>$day:ident),*) => {
+            match cli.day {
+                $(Some($num) => $day::run(),)*
+                None => {
+                    $(
+                        $day::run();
+                    )*
+                }
+                Some(d) => println!("day {d} not implemented"),
+            }
         }
-        Some(d) => println!("day {d} not implemented"),
     }
+    match_day!(1 => day1, 2 => day2, 3 => day3, 4 => day4);
 }
