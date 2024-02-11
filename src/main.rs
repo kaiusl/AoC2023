@@ -12,7 +12,7 @@ fn main() {
     let cli = Cli::parse();
 
     macro_rules! match_day {
-        ($($num:literal =>$day:ident),*) => {
+        ($($num:literal =>$day:ident),*$(,)?) => {
             match cli.day {
                 $(Some($num) => $day::run(),)*
                 None => {
@@ -24,5 +24,13 @@ fn main() {
             }
         }
     }
-    match_day!(1 => day1, 2 => day2, 3 => day3, 4 => day4, 5 => day5, 6 => day6);
+    match_day!(
+        1 => day1,
+        2 => day2,
+        3 => day3,
+        4 => day4,
+        5 => day5,
+        6 => day6,
+        7 => day7,
+    );
 }
