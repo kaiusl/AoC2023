@@ -12,6 +12,7 @@ anyhow = "1.0.75"
 indoc = "2.0.4"
 rangemap = "1.5.0"
 rayon = "1.8.0"
+num = "0.4.1"
 
 [[bench]]
 name = "benches"
