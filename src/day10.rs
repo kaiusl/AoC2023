@@ -58,6 +58,8 @@ fn solve_part2<const SIZE: usize>(input: &str) -> u64 {
     //    Not 100% sure about it but seems to work with current corners.
     //    UL and DL give 1 larger result for some reason...
     // 3. Inside part has odd parity
+    // see here https://www.reddit.com/r/adventofcode/comments/18evyu9/comment/kcqgo61/
+    // I didn't realize that corners can form a horizontal pipe as well and we need to count them
     let (data, start) = parse::<SIZE>(input);
     let mut cursor = data.cursor(start);
 
