@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 const DAY: u8 = 9;
 pub const INPUT: &str = include_str!("../inputs/day9.txt");
 
