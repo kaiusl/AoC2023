@@ -60,6 +60,36 @@ fn solve_part2<const SIZE: usize>(input: &str) -> u64 {
     // 3. Inside part has odd parity
     // see here https://www.reddit.com/r/adventofcode/comments/18evyu9/comment/kcqgo61/
     // I didn't realize that corners can form a horizontal pipe as well and we need to count them
+
+    //    a    b        a    b
+    // ---------     F-------7
+    // |..------     |..F----J
+    // |..|          |..|
+    // |..------     |..L----7
+    // |.......|     |.......|
+    // ---------     L-------J
+    //
+    // See the column a, to get correct parity (odd inside) we need to count both F (DR) and L (UR) corners or neither.
+    // From column b we see that same goes for 7 and J.
+    //
+    //    a b        a b
+    // ----       F--7
+    // |..---     |..L-7
+    // |....|     |....|
+    // |....|     |....|
+    // |..---     |..F-J
+    // |..|       |..|
+    // ----       L--J
+    //
+    // Now in the column a we need to only count one of the 7 (DL) or L (UR) corners to get correct parity (odd inside).
+    // Thus effectively 7|L pair forms a single horizontal pipe, same goes for F|J pairs.
+    //
+    // So in summary from first we need to count both of FL and/or 7J. From the second example one of 7L and/or FJ.
+    // Only way this can work is if we only count either FL (DR, UR) or 7J (DL, UL).
+    //
+    // So now the question remains thy 7J version gives one too large answer for my puzzle, whereas FL gives the right
+    // answer.
+
     let (data, start) = parse::<SIZE>(input);
     let mut cursor = data.cursor(start);
 
