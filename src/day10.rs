@@ -50,6 +50,31 @@ fn solve_part1<const SIZE: usize>(input: &str) -> u64 {
     steps as u64
 }
 
+#[derive(Debug, Clone, Copy)]
+enum PipeKind {
+    Horizontal,
+    Other,
+    Not,
+}
+
+impl PipeKind {
+    fn from_pipe(pipe: &Pipe) -> PipeKind {
+        match pipe {
+            Pipe::Horizontal | Pipe::URCorner | Pipe::DRCorner => PipeKind::Horizontal,
+            Pipe::None => PipeKind::Not,
+            _ => PipeKind::Other,
+        }
+    }
+
+    fn is_horizontal(&self) -> bool {
+        matches!(self, Self::Horizontal)
+    }
+
+    fn is_not(&self) -> bool {
+        matches!(self, Self::Not)
+    }
+}
+
 fn solve_part2<const SIZE: usize>(input: &str) -> u64 {
     // 1. Find the path
     // 2. Move up to down and count horizontal pipes
@@ -89,29 +114,31 @@ fn solve_part2<const SIZE: usize>(input: &str) -> u64 {
     //
     // So now the question remains thy 7J version gives one too large answer for my puzzle, whereas FL gives the right
     // answer.
+    // (Fixed now. The answer was that we didn't handle the start corner at all and it could be the corner we need to count.)
 
     let (data, start) = parse::<SIZE>(input);
     let mut cursor = data.cursor(start);
+    let mut path = [[PipeKind::Not; SIZE]; SIZE];
 
-    let mut next_dir = find_any_start_dir(&mut cursor);
-    let mut path = [[Pipe::None; SIZE]; SIZE];
+    let next_dirs = find_all_start_dirs(&cursor);
+    let start_pipe = start_pipe_kind(&next_dirs);
+    let (x, y) = cursor.current_pos();
+    path[x][y] = PipeKind::from_pipe(&start_pipe);
+
+    let mut next_dir = next_dirs[0];
     loop {
         cursor.step(next_dir);
         let prev_dir = next_dir;
         let current_pipe = cursor.current();
 
-        let (x, y) = cursor.current_pos();
-        path[x][y] = if matches!(
-            current_pipe,
-            Pipe::Horizontal | Pipe::URCorner | Pipe::DRCorner
-        ) {
-            Pipe::Horizontal
-        } else {
-            Pipe::Start
-        };
+        // need to break before assigning to path so we don't override start square
         let Some(next) = next_step_dir(prev_dir, *current_pipe) else {
             break;
         };
+
+        let (x, y) = cursor.current_pos();
+        path[x][y] = PipeKind::from_pipe(current_pipe);
+
         next_dir = next;
     }
 
@@ -121,7 +148,7 @@ fn solve_part2<const SIZE: usize>(input: &str) -> u64 {
         for &it in &c {
             if it.is_horizontal() {
                 inside = !inside;
-            } else if inside && it.is_none() {
+            } else if inside && it.is_not() {
                 count_inside += 1;
             }
         }
@@ -186,6 +213,19 @@ fn find_any_start_dir<const N: usize>(cursor: &mut MatrixCursor<'_, Pipe, N>) ->
     }
 
     unreachable!()
+}
+
+fn start_pipe_kind(dirs: &[Dir; 2]) -> Pipe {
+    use Dir::*;
+    match dirs {
+        [Up | Right, Right | Up] => Pipe::URCorner,
+        [Up | Left, Left | Up] => Pipe::ULCorner,
+        [Down | Right, Right | Down] => Pipe::DRCorner,
+        [Down | Left, Left | Down] => Pipe::DLCorner,
+        [Down | Up, Up | Down] => Pipe::Vertical,
+        [Left | Right, Left | Right] => Pipe::Horizontal,
+        _ => unreachable!(),
+    }
 }
 
 fn next_step_dir(came_from: Dir, current_pipe: Pipe) -> Option<Dir> {
