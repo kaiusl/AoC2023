@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::path::Display;
 
 const DAY: u8 = 16;
 pub const INPUT: &str = include_str!("../inputs/day16.txt");
@@ -53,8 +52,28 @@ fn solve_part2(input: &str) -> u64 {
     max
 }
 
+struct Queue<T> {
+    queue: VecDeque<T>,
+}
+
+impl<T> Queue<T> {
+    fn new() -> Self {
+        Self {
+            queue: VecDeque::new(),
+        }
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        self.queue.pop_front()
+    }
+
+    fn push(&mut self, value: T) {
+        self.queue.push_back(value)
+    }
+}
+
 // Assumes that start_dir and start_pos combo is valid
-fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, start_pos: Pos) -> u64 {
+fn solve_core(mut matrix: Matrix<Tile>, start_dir: Direction, start_pos: Pos) -> u64 {
     // General idea here is to loop through the light path
     // and for every visited tile mark in which direction we moved from it.
     // `matrix` contain the token type and the seen directions.
@@ -64,22 +83,17 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
 
     let mut cursor = MatrixCursor::new(&mut matrix, start_pos);
     // Store the splits in the light path that we cannot follow right away and come back to them
-    let mut splits_queue = VecDeque::new();
+    let mut splits_queue = Queue::new();
 
-    // Match the first position and get the next step direction
+    // Match the first position and get the first step direction
     let (next_dir, split) = get_next_step(&mut cursor, start_dir).unwrap();
-    cursor.get_current_mut().1.insert(next_dir);
-    splits_queue.push_back((next_dir, cursor.get_current_pos()));
+    cursor.get_current_mut().add_moved_direction(next_dir);
+    splits_queue.push((next_dir, cursor.get_current_pos()));
     if let Some(split) = split {
-        splits_queue.push_back(split);
+        splits_queue.push(split);
     }
 
-    // Loop through all split light path and mark all energized tiles
-    //
-    // Light path ends if it exits the grid or maps onto a loop
-    // (that is starts moving in the same direction with some earlier path)
-
-    while let Some((dir, pos)) = splits_queue.pop_front() {
+    while let Some((dir, pos)) = splits_queue.pop() {
         let mut prev_direction = dir;
         cursor.set_pos(pos);
         cursor.step(dir);
@@ -89,11 +103,10 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
             let Some((next_dir, split)) = get_next_step(&mut cursor, prev_direction) else {
                 break;
             };
-
-            cursor.get_current_mut().1.insert(next_dir);
+            cursor.get_current_mut().add_moved_direction(next_dir);
 
             if let Some(split) = split {
-                splits_queue.push_back(split);
+                splits_queue.push(split);
             }
 
             if !cursor.step(next_dir) {
@@ -104,21 +117,17 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
         }
     }
 
-    matrix
-        .data
-        .iter()
-        .filter(|(_, dir)| !dir.is_empty())
-        .count() as u64
+    matrix.data.into_iter().filter(Tile::is_energized).count() as u64
 }
 
 /// Get the next step direction and the next split position
 fn get_next_step(
-    cursor: &mut MatrixCursor<'_, (Token, Direction)>,
+    cursor: &mut MatrixCursor<'_, Tile>,
     prev_direction: Direction,
 ) -> Option<(Direction, Option<(Direction, Pos)>)> {
     let mut next_dir = prev_direction;
     let mut split = None;
-    let (current_token, _) = cursor.get_current_mut();
+    let current_token = &cursor.get_current_mut().token;
 
     match current_token {
         Token::LeftMirror if prev_direction.contains(Direction::Up) => {
@@ -167,13 +176,29 @@ fn get_next_step(
         }
     }
 
-    let (_, seen_direction) = cursor.get_current_mut();
-    if seen_direction.contains(next_dir) {
+    let tile = cursor.get_current_mut();
+    if tile.moved_directions.contains(next_dir) {
         // We have reached a loop, since we have already moved from this tile in the same direction
         return None;
     }
 
     Some((next_dir, split))
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Tile {
+    token: Token,
+    moved_directions: Direction,
+}
+
+impl Tile {
+    fn is_energized(&self) -> bool {
+        !self.moved_directions.is_empty()
+    }
+
+    fn add_moved_direction(&mut self, direction: Direction) {
+        self.moved_directions.insert(direction)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -324,7 +349,7 @@ impl<'a, T> MatrixCursor<'a, T> {
     }
 }
 
-fn parse(input: &str) -> Matrix<(Token, Direction)> {
+fn parse(input: &str) -> Matrix<Tile> {
     let num_cols = input.lines().next().unwrap().len();
 
     let mut data = Vec::new();
@@ -342,7 +367,10 @@ fn parse(input: &str) -> Matrix<(Token, Direction)> {
                 _ => unreachable!(),
             };
 
-            data.push((token, Direction::empty()));
+            data.push(Tile {
+                token,
+                moved_directions: Direction::empty(),
+            });
         }
     }
 
@@ -397,6 +425,6 @@ mod benches {
     #[divan::bench]
     fn part2() {
         let answer = solve_part2(black_box(INPUT));
-        assert_eq!(answer, todo!());
+        assert_eq!(answer, 8318);
     }
 }
