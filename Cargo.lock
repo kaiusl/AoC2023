@@ -61,6 +61,7 @@ name = "aoc2023"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags",
  "clap",
  "divan",
  "indoc",
