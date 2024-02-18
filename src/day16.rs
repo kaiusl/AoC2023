@@ -47,7 +47,7 @@ fn solve_part2(input: &str) -> u64 {
         let result = solve_core(matrix.clone(), Direction::Up, (matrix.rows - 1, i));
         max = max.max(result);
 
-        dbg!(i, max);
+        //dbg!(i, max);
     }
 
     max
@@ -55,11 +55,20 @@ fn solve_part2(input: &str) -> u64 {
 
 // Assumes that start_dir and start_pos combo is valid
 fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, start_pos: Pos) -> u64 {
+    // General idea here is to loop through the light path
+    // and for every visited tile mark in which direction we moved from it.
+    // `matrix` contain the token type and the seen directions.
+    //
+    // Light path ends if it exits the grid or maps onto a loop.
+    // A loop starts if we find a tile from which we already moved in that same direction.
+
     let mut cursor = MatrixCursor::new(&mut matrix, start_pos);
+    // Store the splits in the light path that we cannot follow right away and come back to them
     let mut splits_queue = VecDeque::new();
 
     // Match the first position and get the next step direction
     let (next_dir, split) = get_next_step(&mut cursor, start_dir).unwrap();
+    cursor.get_current_mut().1.insert(next_dir);
     splits_queue.push_back((next_dir, cursor.get_current_pos()));
     if let Some(split) = split {
         splits_queue.push_back(split);
@@ -70,7 +79,6 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
     // Light path ends if it exits the grid or maps onto a loop
     // (that is starts moving in the same direction with some earlier path)
 
-    let mut i = 0;
     while let Some((dir, pos)) = splits_queue.pop_front() {
         let mut prev_direction = dir;
         cursor.set_pos(pos);
@@ -82,6 +90,8 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
                 break;
             };
 
+            cursor.get_current_mut().1.insert(next_dir);
+
             if let Some(split) = split {
                 splits_queue.push_back(split);
             }
@@ -91,152 +101,77 @@ fn solve_core(mut matrix: Matrix<(Token, Direction)>, start_dir: Direction, star
             }
 
             prev_direction = next_dir;
-            i += 1;
-            // if i % 1_000_000 == 0 {
-            //     println!("{}", cursor.matrix);
-            // }
         }
     }
 
     matrix
         .data
         .iter()
-        .filter(|(t, _)| {
-            matches!(
-                t,
-                Token::LightUp
-                    | Token::LightDown
-                    | Token::LightLeft
-                    | Token::LightRight
-                    | Token::EnergizedHorizontalSplitter
-                    | Token::EnergizedLeftMirror
-                    | Token::EnergizedRightMirror
-                    | Token::EnergizedVerticalSplitter
-            )
-        })
+        .filter(|(_, dir)| !dir.is_empty())
         .count() as u64
 }
+
 /// Get the next step direction and the next split position
-///
-/// Marks the current position as energized
 fn get_next_step(
     cursor: &mut MatrixCursor<'_, (Token, Direction)>,
     prev_direction: Direction,
 ) -> Option<(Direction, Option<(Direction, Pos)>)> {
     let mut next_dir = prev_direction;
     let mut split = None;
-    let (current_token, seen_direction) = cursor.get_current_mut();
+    let (current_token, _) = cursor.get_current_mut();
 
     match current_token {
-        Token::Empty if prev_direction.contains(Direction::Up) => {
-            //cursor.set_current(Token::LightUp);
-            *current_token = Token::LightUp;
-        }
-        Token::LeftMirror | Token::EnergizedLeftMirror
-            if prev_direction.contains(Direction::Up) =>
-        {
-            *current_token = Token::EnergizedLeftMirror;
+        Token::LeftMirror if prev_direction.contains(Direction::Up) => {
             next_dir = Direction::Left;
         }
-        Token::RightMirror | Token::EnergizedRightMirror
-            if prev_direction.contains(Direction::Up) =>
-        {
-            *current_token = Token::EnergizedRightMirror;
+        Token::RightMirror if prev_direction.contains(Direction::Up) => {
             next_dir = Direction::Right;
         }
-        Token::LightUp if prev_direction.contains(Direction::Up) => return None,
-        Token::Empty if prev_direction.contains(Direction::Down) => {
-            *current_token = Token::LightDown;
-        }
-        Token::LeftMirror | Token::EnergizedLeftMirror
-            if prev_direction.contains(Direction::Down) =>
-        {
-            *current_token = Token::EnergizedLeftMirror;
-            next_dir = Direction::Right;
-        }
-        Token::RightMirror | Token::EnergizedRightMirror
-            if prev_direction.contains(Direction::Down) =>
-        {
-            *current_token = Token::EnergizedRightMirror;
-            next_dir = Direction::Left;
-        }
-        Token::LightDown if prev_direction.contains(Direction::Down) => return None,
 
-        Token::HorizontalSplitter | Token::EnergizedHorizontalSplitter
+        Token::LeftMirror if prev_direction.contains(Direction::Down) => {
+            next_dir = Direction::Right;
+        }
+        Token::RightMirror if prev_direction.contains(Direction::Down) => {
+            next_dir = Direction::Left;
+        }
+        Token::HorizontalSplitter
             if prev_direction.contains(Direction::Down)
                 || prev_direction.contains(Direction::Up) =>
         {
-            *current_token = Token::EnergizedHorizontalSplitter;
             split = Some((Direction::Right, cursor.get_current_pos()));
             next_dir = Direction::Left;
         }
 
-        Token::Empty if prev_direction.contains(Direction::Left) => {
-            *current_token = Token::LightLeft;
-        }
-        Token::LeftMirror | Token::EnergizedLeftMirror
-            if prev_direction.contains(Direction::Left) =>
-        {
-            *current_token = Token::EnergizedLeftMirror;
+        Token::LeftMirror if prev_direction.contains(Direction::Left) => {
             next_dir = Direction::Up;
         }
-        Token::RightMirror | Token::EnergizedRightMirror
-            if prev_direction.contains(Direction::Left) =>
-        {
-            *current_token = Token::EnergizedRightMirror;
+        Token::RightMirror if prev_direction.contains(Direction::Left) => {
             next_dir = Direction::Down
         }
-        Token::LightLeft if prev_direction.contains(Direction::Left) => return None,
-
-        Token::Empty if prev_direction.contains(Direction::Right) => {
-            *current_token = Token::LightRight;
-        }
-        Token::LeftMirror | Token::EnergizedLeftMirror
-            if prev_direction.contains(Direction::Right) =>
-        {
-            *current_token = Token::EnergizedLeftMirror;
+        Token::LeftMirror if prev_direction.contains(Direction::Right) => {
             next_dir = Direction::Down;
         }
-        Token::RightMirror | Token::EnergizedRightMirror
-            if prev_direction.contains(Direction::Right) =>
-        {
-            *current_token = Token::EnergizedRightMirror;
+        Token::RightMirror if prev_direction.contains(Direction::Right) => {
             next_dir = Direction::Up;
         }
-        Token::LightRight if prev_direction.contains(Direction::Right) => return None,
 
-        Token::VerticalSplitter | Token::EnergizedVerticalSplitter
+        Token::VerticalSplitter
             if prev_direction.contains(Direction::Right)
                 || prev_direction.contains(Direction::Left) =>
         {
-            *current_token = Token::EnergizedVerticalSplitter;
             split = Some((Direction::Up, cursor.get_current_pos()));
             next_dir = Direction::Down;
         }
-        _ => match current_token {
-            Token::VerticalSplitter => {
-                *current_token = Token::EnergizedVerticalSplitter;
-            }
-            Token::HorizontalSplitter => {
-                *current_token = Token::EnergizedHorizontalSplitter;
-            }
-            Token::LeftMirror => {
-                *current_token = Token::EnergizedLeftMirror;
-            }
-            Token::RightMirror => {
-                *current_token = Token::EnergizedRightMirror;
-            }
-            _ => {}
-        },
+        _ => {
+            // keep moving in the same direction
+        }
     }
 
     let (_, seen_direction) = cursor.get_current_mut();
-
     if seen_direction.contains(next_dir) {
+        // We have reached a loop, since we have already moved from this tile in the same direction
         return None;
     }
-
-    seen_direction.insert(next_dir);
 
     Some((next_dir, split))
 }
@@ -248,15 +183,6 @@ enum Token {
     HorizontalSplitter,
     LeftMirror,
     RightMirror,
-
-    LightUp,
-    LightDown,
-    LightLeft,
-    LightRight,
-    EnergizedVerticalSplitter,
-    EnergizedHorizontalSplitter,
-    EnergizedLeftMirror,
-    EnergizedRightMirror,
 }
 
 use bitflags::bitflags;
@@ -275,14 +201,10 @@ impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::Empty => write!(f, "."),
-            Token::VerticalSplitter | Token::EnergizedVerticalSplitter => write!(f, "|"),
-            Token::HorizontalSplitter | Token::EnergizedHorizontalSplitter => write!(f, "-"),
-            Token::LeftMirror | Token::EnergizedLeftMirror => write!(f, "\\"),
-            Token::RightMirror | Token::EnergizedRightMirror => write!(f, "/"),
-            Token::LightUp => write!(f, "^"),
-            Token::LightDown => write!(f, "v"),
-            Token::LightLeft => write!(f, "<"),
-            Token::LightRight => write!(f, ">"),
+            Token::VerticalSplitter => write!(f, "|"),
+            Token::HorizontalSplitter => write!(f, "-"),
+            Token::LeftMirror => write!(f, "\\"),
+            Token::RightMirror => write!(f, "/"),
         }
     }
 }
