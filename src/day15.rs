@@ -18,7 +18,31 @@ fn solve_part1(input: &str) -> u64 {
 }
 
 fn solve_part2(input: &str) -> u64 {
-    todo!()
+    let mut map = HashMap::new();
+
+    for op in input.split(',') {
+        if op.ends_with('-') {
+            let label = &op[0..op.len() - 1];
+            map.remove(label);
+        } else {
+            let (label, lens) = op.split_once('=').unwrap();
+            let lens = lens.parse::<Lens>().unwrap();
+            map.insert(label, lens);
+        }
+    }
+
+    let mut focusing_power = 0;
+    for (box_number, boks) in (1..).zip(map.data) {
+        if boks.is_empty() {
+            continue;
+        }
+
+        for (lens_number, (_, focal_length)) in (1..).zip(boks) {
+            focusing_power += box_number * lens_number * focal_length as u64;
+        }
+    }
+
+    focusing_power
 }
 
 fn hash(input: &str) -> u8 {
@@ -28,6 +52,38 @@ fn hash(input: &str) -> u8 {
         tmp *= 17;
         (tmp % 256) as u8
     })
+}
+
+type Lens = u8;
+type Label = str;
+
+#[derive(Debug)]
+struct HashMap<'a> {
+    data: [Vec<(&'a Label, Lens)>; 256],
+}
+
+impl<'a> HashMap<'a> {
+    fn new() -> Self {
+        Self {
+            data: std::array::from_fn(|_| Vec::new()),
+        }
+    }
+
+    fn insert(&mut self, label: &'a Label, lens: Lens) {
+        let hash = hash(label) as usize; // hash is already between 0 and 255
+        let bucket = &mut self.data[hash];
+        if let Some((_, _lens)) = bucket.iter_mut().find(|(_label, _)| *_label == label) {
+            *_lens = lens;
+        } else {
+            bucket.push((label, lens));
+        }
+    }
+
+    fn remove(&mut self, label: &'a Label) {
+        let hash = hash(label) as usize;
+        let bucket = &mut self.data[hash];
+        bucket.retain(|(_label, _)| *_label != label);
+    }
 }
 
 #[cfg(test)]
@@ -50,7 +106,7 @@ mod tests {
     #[test]
     fn test_part2() {
         let answer = solve_part2(TEST_INPUT1);
-        assert_eq!(answer, todo!());
+        assert_eq!(answer, 145);
     }
 }
 
@@ -68,6 +124,6 @@ mod benches {
     #[divan::bench]
     fn part2() {
         let answer = solve_part2(black_box(INPUT));
-        assert_eq!(answer, todo!());
+        assert_eq!(answer, 258826);
     }
 }
