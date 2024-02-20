@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use std::ops::Range;
 
 const DAY: u8 = 19;
@@ -41,7 +40,14 @@ fn is_part_accepted(workflows: &HashMap<&str, Workflow>, part: &Part) -> bool {
 }
 
 fn solve_part2(input: &str) -> u64 {
-    let (workflows, _) = parse2(input);
+    // The idea here is to use a range based part (RangePart), which at start
+    // includes all possibilities. We run it through the workflows and keep reducing
+    // the accepted category ranges. For rules which split the range in two (for example a<1500)
+    // we split the RangePart and continue the workflow for each part.
+    // If one part reaches the accepted result, we calculate the number of combinations
+    // that part includes and add it to the total.
+
+    let workflows = parse2(input);
     let part = RangePart::new(1..4001);
     part2_core(&workflows, "in", part)
 }
@@ -65,7 +71,7 @@ fn part2_core(workflows: &HashMap<&str, Vec<RuleDef>>, workflow: &str, mut part:
                     out += part2_core(workflows, wf.as_str(), accepted.0);
                 }
                 RuleResult::NextRule => {
-                    // this is the rejected part
+                    // this is the rejected part, it's not possible for accepted
                     unreachable!()
                 }
             }
@@ -89,6 +95,7 @@ struct RuleSplitResult {
 
 fn split_part_by_rule(rule: &RuleDef, part: RangePart) -> RuleSplitResult {
     let Some(condition) = &rule.condition else {
+        // if no condition, then we accept all
         return RuleSplitResult {
             accepted: Some((part, rule.result.clone())),
             rejected: None,
@@ -114,10 +121,12 @@ fn split_part_by_rule(rule: &RuleDef, part: RangePart) -> RuleSplitResult {
             }
         };
         ($cat:ident, Op::Gt) => {{
+            // a>1500, accept 1501.., reject ..1501
             let (rejected, accepted) = split_range(&part.$cat, condition.value + 1);
             split_rule!(@createResult $cat, accepted, rejected)
         }};
         ($cat:ident, Op::Lt) => {{
+            // a<1500, accept ..1500, reject 1500..
             let (accepted, rejected) = split_range(&part.$cat, condition.value);
             split_rule!(@createResult $cat, accepted, rejected)
         }};
@@ -200,7 +209,7 @@ impl RangePart {
             x: range.clone(),
             m: range.clone(),
             a: range.clone(),
-            s: range.clone(),
+            s: range,
         }
     }
 
@@ -228,10 +237,10 @@ fn parse(input: &str) -> (HashMap<&str, Workflow>, impl Iterator<Item = Part> + 
     (workflows, parse_parts(parts_input))
 }
 
-fn parse2(input: &str) -> (HashMap<&str, Vec<RuleDef>>, impl Iterator<Item = Part> + '_) {
+fn parse2(input: &str) -> HashMap<&str, Vec<RuleDef>> {
     let mut workflows = HashMap::new();
 
-    let (workflows_input, parts_input) = input.split_once("\n\n").unwrap();
+    let (workflows_input, _) = input.split_once("\n\n").unwrap();
 
     for line in workflows_input.lines() {
         let (name, workflow) = line.split_once('{').unwrap();
@@ -240,7 +249,7 @@ fn parse2(input: &str) -> (HashMap<&str, Vec<RuleDef>>, impl Iterator<Item = Par
         workflows.insert(name, rules);
     }
 
-    (workflows, parse_parts(parts_input))
+    workflows
 }
 fn parse_parts(input: &str) -> impl Iterator<Item = Part> + '_ {
     input.lines().map(|line| {
